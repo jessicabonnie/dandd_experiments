@@ -5,6 +5,31 @@ date: "8/31/2022"
 output: html_document
 ---
 
+##The first two chunks merely describe how the data in the dash_kmc_bench.csv table was created
+
+```{bash benchmark, eval=FALSE}
+#1 =species, 2=approach, 3=kval, 4=upperout
+codedir=/home/jbonnie1/dandd/dev-dandD/helpers
+upperout=/scratch4/blangme2/jessica/dandd/RECOMB/benchmarking #1
+species=humanb
+${codedir}/benchmark.sh ${species} dashing 20 ${upperout} > ${upperout}/${species}_dashing_benchmark.txt
+${codedir}/benchmark.sh ${species} kmc 20 ${upperout} > ${upperout}/${species}_kmc_benchmark.txt
+
+#species=humanb19
+#${codedir}/benchmark.sh ${species} dashing 19 ${upperout} > ${upperout}/${species}_dashing_benchmark.txt
+#${codedir}/benchmark.sh ${species} kmc 19 ${upperout} > ${upperout}/${species}_kmc_benchmark.txt
+
+species=ecoli
+${codedir}/benchmark.sh ${species} dashing 15 ${upperout} > ${upperout}/${species}_dashing_benchmark.txt
+${codedir}/benchmark.sh ${species} kmc 15 ${upperout} > ${upperout}/${species}_kmc_benchmark.txt
+
+species=salmonella
+${codedir}/benchmark.sh ${species} dashing 14 ${upperout} > ${upperout}/${species}_dashing_benchmark.txt
+${codedir}/benchmark.sh ${species} kmc 14 ${upperout} > ${upperout}/${species}_kmc_benchmark.txt
+
+```
+
+
 
 ```{r prep}
 require(dplyr)
@@ -14,32 +39,46 @@ require(lubridate)
 require(pander)
 require(knitr)
 
-e.kval=14
-e.dtimes<-read.csv(paste0("../../scratch/benchmarking/ecoli_dashing_k",e.kval,".csv"),stringsAsFactors = FALSE) %>% mutate(line=row_number())
-e.ktimes <- read.csv(paste0("../../scratch/benchmarking/ecoli_kmc_k",e.kval,".csv"),stringsAsFactors = FALSE) %>% mutate(line=row_number())
-e.times <- rbind(e.dtimes,e.ktimes) %>% mutate(species="ecoli", Count=as.numeric(Count),WallClock_sec=period_to_seconds(hms(WallClock_hms,quiet = TRUE)))
+upperout="/scratch4/blangme2/jessica/dandd/RECOMB/benchmarking"
+
+e.kval=15
+e.dtimes<-read.csv(paste0(upperout,"/ecoli_dashing_k",e.kval,".csv"),stringsAsFactors = FALSE) %>% mutate(line=row_number())
+e.ktimes <- read.csv(paste0(upperout,"/ecoli_kmc_k",e.kval,".csv"),stringsAsFactors = FALSE) %>% mutate(line=row_number())
+e.times <- rbind(e.dtimes,e.ktimes) %>% mutate(species="ecoli", Count=as.numeric(Count),WallClock_sec=as.numeric(ms(WallClock_hms,quiet = TRUE)))
 e.times$MaxResSetSize_kb[e.times$Stage==2 & e.times$Count==1] <- NA
-e.times$WallClock_hms <- hms(e.times$WallClock_hms,quiet = TRUE)
+#e.times$WallClock_ms <- ms(e.times$WallClock_hms,quiet = TRUE)
 
 
 
-s.kval=15
-s.dtimes<-read.csv(paste0("../../scratch/benchmarking/salmonella_dashing_k",s.kval,".csv"),stringsAsFactors = FALSE) %>% mutate(line=row_number())
-s.ktimes <- read.csv(paste0("../../scratch/benchmarking/salmonella_kmc_k",s.kval,".csv"),stringsAsFactors = FALSE) %>% mutate(line=row_number())
-s.times <- rbind(s.dtimes,s.ktimes) %>% mutate(species="salmonella", Count=as.numeric(Count),WallClock_sec=period_to_seconds(hms(WallClock_hms,quiet = TRUE)))
+s.kval=14
+s.dtimes<-read.csv(paste0(upperout,"/salmonella_dashing_k",s.kval,".csv"),stringsAsFactors = FALSE) %>% mutate(line=row_number())
+s.ktimes <- read.csv(paste0(upperout,"/salmonella_kmc_k",s.kval,".csv"),stringsAsFactors = FALSE) %>% mutate(line=row_number())
+s.times <- rbind(s.dtimes,s.ktimes) %>% mutate(species="salmonella", Count=as.numeric(Count),WallClock_sec=as.numeric(ms(WallClock_hms,quiet = TRUE)))
 s.times$MaxResSetSize_kb[s.times$Stage==2 & s.times$Count==1] <- NA
-s.times$WallClock_hms <- hms(s.times$WallClock_hms,quiet = TRUE)
+#s.times$WallClock_ms <- ms(s.times$WallClock_hms,quiet = TRUE)
 
-h.kval=18
-h.dtimes<-read.csv(paste0("../../scratch/benchmarking/human_dashing_k",h.kval,".csv"),stringsAsFactors = FALSE) %>% mutate(line=row_number())
-h.ktimes <- read.csv(paste0("../../scratch/benchmarking/human_kmc_k",h.kval,".csv"),stringsAsFactors = FALSE) %>% mutate(line=row_number())
-h.times <- rbind(h.dtimes,h.ktimes) %>% mutate(species="human", Count=as.numeric(Count),WallClock_sec=period_to_seconds(hms(WallClock_hms,quiet = TRUE)))
+h.kval=20
+h.dtimes<-read.csv(paste0(upperout,"/humanb_dashing_k",h.kval,".csv"),stringsAsFactors = FALSE) %>% mutate(line=row_number())
+h.ktimes <- read.csv(paste0(upperout,"/humanb_kmc_k",h.kval,".csv"),stringsAsFactors = FALSE) %>% mutate(line=row_number())
+h.times <- rbind(h.dtimes,h.ktimes) %>% 
+  mutate(species="humanb", Count=as.numeric(Count), WallClock_sec=as.numeric(ms(WallClock_hms,quiet = TRUE)))
 h.times$MaxResSetSize_kb[h.times$Stage==2 & h.times$Count==1] <- NA
-h.times$WallClock_hms <- hms(h.times$WallClock_hms,quiet = TRUE)
+#h.times$WallClock_ms <- ms(h.times$WallClock_hms,quiet = TRUE)
 
-all.times <- rbind(e.times,s.times,h.times)
+
+all.times <- rbind(e.times,s.times, h.times) %>%
+  mutate(MaxResSetSize_gb=MaxResSetSize_kb/1e6,
+         WallClock_ms = WallClock_sec*1e3)
+```
+
+##Here on to generate from all.times table
+ 
+```{r start}
 #all.times$MaxResSetSize_kb[all.times$Stage==2 & all.times$Count==1] <- NA
-
+cards <- all.times %>% 
+  select(Method, species,Stage,Card, Count, line) %>%
+  pivot_wider(names_from=Method,values_from=Card) %>%
+  mutate(AbsDiff=abs(dashing-kmc), Ratio=AbsDiff/kmc)
 
 ```
 
@@ -54,11 +93,26 @@ all.times <- rbind(e.times,s.times,h.times)
 #Stage 3 (Full Union) Time Value: It is what it is
 #Stage 3 (Full Union) Space Value: Ditto
 
-stage1 <- all.times %>% filter(Stage==1) %>%
-  select(-Card,-Count,-Fasta,-Sketch,-Order,-line) %>% 
-  group_by(species, Method) %>% summarise_all(mean) %>% 
-  select(species, Method, WallClock_sec, MaxResSetSize_kb, Stage=Stage)
-stage1
+stage1 <- all.times %>% filter(Stage==1) %>% ungroup() %>%
+  select(-Card,-Count,-Fasta,-Sketch,-Order,-line, -WallClock_hms, -SystemTime_sec, -Stage) %>% 
+  group_by(species, Method) %>% 
+  #mutate(MaxResSetSize_gb=MaxResSetSize_kb/1e6) %>% 
+  summarise_all(c(mean, sd)) %>% 
+  select(species, Method, contains("WallClock"), contains("MaxResSetSize")) %>%
+  rename(WallClock_mean=WallClock_sec_fn1,
+         WallClock_sd=WallClock_sec_fn2,
+         WallClock_ms_mean=WallClock_ms_fn1,
+         WallClock_ms_sd=WallClock_ms_fn2,
+         MaxResSetSize_kb_mean=MaxResSetSize_kb_fn1,
+         MaxResSetSize_kb_sd=MaxResSetSize_kb_fn2,
+         MaxResSetSize_gb_mean=MaxResSetSize_gb_fn1,
+         MaxResSetSize_gb_sd=MaxResSetSize_gb_fn2) 
+#%>%
+  # mutate(MaxResSetSize_gb_mean=MaxResSetSize_kb_mean/1e6,
+  #        MaxResSetSize_gb_sd=MaxResSetSize_kb_sd/1e6,
+  #        WallClock_mean_ms=WallClock_mean*1e3,
+  #        WallClock_sd_ms=WallClock_sd*1e3)
+stage1 %>% select(species,Method,contains("Wall"),contains("MaxRes"))
 
 ```
 
@@ -77,9 +131,12 @@ stage1
 stage2 <- all.times %>% filter(Stage==2)  %>% 
   select(-Card,-Count) %>% 
   group_by(species, Method) %>%
-  summarise(maxspace=max(MaxResSetSize_kb,na.rm = TRUE),totalwall=sum(WallClock_sec,na.rm = TRUE),totaluser=sum(UserTime_sec,na.rm = TRUE),
-            totalsystem=sum(SystemTime_sec,na.rm = TRUE))  %>% mutate(Stage=2) %>%
-  select(species, Method, WallClock_sec=totalwall, MaxResSetSize_kb=maxspace, Stage) 
+  summarise(maxspace=max(MaxResSetSize_kb,na.rm = TRUE),
+            maxspace_gb=max(MaxResSetSize_gb,na.rm = TRUE),
+            totalwall=sum(WallClock_sec,na.rm = TRUE),totaluser=sum(UserTime_sec,na.rm = TRUE),
+            totalwall_ms=sum(WallClock_ms,na.rm = TRUE),
+            totalsystem=sum(SystemTime_sec,na.rm = TRUE))   %>%
+  select(species,Method,contains("Wall"),contains("space"))
 
 stage2
 
@@ -99,7 +156,7 @@ stage2
 
 stage3 <- all.times %>% filter(Stage==3)  %>% ungroup() %>%
   #group_by(species, Method) %>%
-  select(Method, species, WallClock_sec, MaxResSetSize_kb, Stage) 
+  select(species,Method,contains("Wall"),contains("gb"),contains("kb"),-contains("hms"))
 
 stage3
 
