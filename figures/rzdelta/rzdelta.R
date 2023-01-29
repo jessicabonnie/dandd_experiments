@@ -11,12 +11,26 @@ library(latex2exp)
 all_metric <- fread("./rzdelta_scaled_values.csv")
 all_bench <- fread("./rzdelta_time_bench.csv")
 
-#print(all_metric$metric)
-# all_metric$metric <- factor(all_metric$metric,
-#                                levels=c('r', 'z', 'delta'),
-#                                labels=c(unname(TeX('$r$')),
-#                                         unname(TeX('$z$')),
-#                                         unname(TeX('$\\delta$'))))
+r_vals <- (all_metric %>% filter(metric == 'r') %>% arrange(value))$value
+z_vals <- (all_metric %>% filter(metric == 'z') %>% arrange(value))$value
+d_vals <- (all_metric %>% filter(metric != 'r' & metric != 'z') %>% arrange(value))$value
+
+summary(r_vals - z_vals)
+summary(z_vals - d_vals)
+summary(r_vals - d_vals)
+
+# > summary(r_vals - z_vals)
+#      Min.   1st Qu.    Median      Mean   3rd Qu.      Max.
+# -0.027272 -0.009205  0.000000 -0.003186  0.003312  0.010307
+# > summary(z_vals - d_vals)
+#       Min.    1st Qu.     Median       Mean    3rd Qu.       Max.
+# -0.0273759 -0.0131273 -0.0029493 -0.0039276  0.0009673  0.0215961
+# > summary(r_vals - d_vals)
+#       Min.    1st Qu.     Median       Mean    3rd Qu.       Max.
+# -1.707e-02 -1.076e-02 -6.896e-03 -7.114e-03 -2.799e-03  8.531e-06
+
+# Above: in support of the claim "with no two of the normalized
+# measures ever differing by more than $\pm 0.0273$."
 
 pdf(file='f2_rzdelta.pdf', width=4, height=3)
 ggplot(all_metric) +
