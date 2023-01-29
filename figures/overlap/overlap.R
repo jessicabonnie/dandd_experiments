@@ -9,16 +9,16 @@ require(callr)
 require(codetools)
 
 ## Prep data
-overlap<-read.csv('./overlap_progu90_8_dashing.csv') %>% 
-  mutate(dataset="Pangenome")
-hgsvc2<-read.csv('./hgoverlap_progu90_8_dashing.csv') %>% 
-  mutate( dataset="HGSVC2")
+# overlap<-read.csv('./overlap_progu90_8_dashing.csv') %>% 
+#   mutate(dataset="Pangenome")
+# hgsvc2<-read.csv('./hgoverlap_progu90_8_dashing.csv') %>% 
+#   mutate( dataset="HGSVC2")
 
-progu=rbind(overlap,hgsvc2)
+# progu=rbind(overlap,hgsvc2)
 
-summary <- summarize(group_by(progu, ngen, dataset), mean=mean(delta))
-gcount=max(progu$ngen)
-norder=max(progu$ordering)
+summary <- fread('./overlap_summary.csv')
+gcount=max(summary$ngen)
+norder=90
 tp <-
   ggplot() + 
   geom_line(data=ungroup(summary), aes(y=mean, x=ngen, color=dataset)) +
@@ -31,6 +31,7 @@ tp <-
   ggtitle(label="8 Overlapping Haplotypes between Pangenome and HGHVC2")  +
   scale_y_continuous(labels = scales::label_number_auto())
 
+tp
 
 ggplot2::ggsave(filename = "overlap_plot.png", 
                 plot = tp,
