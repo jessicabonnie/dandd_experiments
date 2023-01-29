@@ -2,6 +2,7 @@ require(lubridate)
 require(tidyr)
 require(dplyr)
 require(ggplot2)
+require(data.table)
 
 
 
