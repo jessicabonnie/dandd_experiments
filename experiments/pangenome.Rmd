@@ -8,44 +8,56 @@ date: '2022-12-27'
 codelib=/home/jbonnie1/dandd/dev-dandD/lib
 datadir=/data/blangme2/fasta/hprc-yr1
 jdatadir=/data/blangme2/jessica/pangenome
+hgwkdir=/scratch4/blangme2/jessica/dandd/scratch/HGSVC2
 wkdir=/scratch4/blangme2/jessica/dandd/scratch/pangenome
 fasta_list=${jdatadir}/pangenome_fasta_paths.txt
 female_fastas=${jdatadir}/pangenome_fasta_paths_female.txt
-overlap_list=${wkdir}/pangenome_hvsvc2_fasta_paths.txt
+overlap_list=${wkdir}/pangenome_hgsvc2_fasta_paths.txt
+foverlap_list=${wkdir}/pangenome_hgsvc2_fasta_paths_female.txt
+hgoverlap_list=${hgwkdir}/pangenome_hgsvc2_fasta_paths.txt
+hgoverlap_female=${hgwkdir}/pangenome_hgsvc2_fasta_paths_female.txt
+hgfemale_fastas=/data/blangme2/jessica/HGSVC2/consensus_fastas_nonrel_female.txt
 realpath ${datadir}/HG*.fa > ${fasta_list}
 realpath ${datadir}/NA*.fa >> ${fasta_list}
 
 
 ## FEMALES SUBSETTING HERE
+awk '{print $1}' ${jdatadir}/hprc_year1_assemblies_v2_sample_metadata.txt > ${jdatadir}/hprc_year1_SampleIds.txt
 grep female ${jdatadir}/hprc_year1_assemblies_v2_sample_metadata.txt | awk '{print $1}' > ${jdatadir}/hprc_year1_females.txt
 grep -f ${jdatadir}/hprc_year1_females.txt ${fasta_list} > ${female_fastas}
 
+## create overlap list with HGSVC2 all sexes ... turns out several of these people are from the related list??
+grep -f /data/blangme2/jessica/HGSVC2/raw/SampleIds.txt ${fasta_list} > ${overlap_list}
+grep -f /data/blangme2/jessica/HGSVC2/raw/SampleIds_female.txt ${female_fastas} > ${foverlap_list}
 
-python ${codelib}/dandd_cmd.py tree -s female -f ${female_fastas} --nthreads 20 -k25 -o ${wkdir}
+
+## Create overlap list in the HGSVC2 data
+grep -f ${jdatadir}/hprc_year1_SampleIds.txt /data/blangme2/jessica/HGSVC2/consensus_fastas.txt > ${hgoverlap_list}
+grep -f ${jdatadir}/hprc_year1_females.txt /data/blangme2/jessica/HGSVC2/consensus_fastas.txt > ${hgoverlap_female}
+
+## Run full pangenome: make a tree and do progressive union on that tree... maybe do a ksweep if that feels right
+python ${codelib}/dandd_cmd.py tree -s female -f ${female_fastas} -k20 -o ${wkdir}
 tree_pick=${wkdir}/female_56_dashing_dtree.pickle
 python ${codelib}/dandd_cmd.py progressive -d ${tree_pick} -n 30
-python ${codelib}/dandd_cmd.py info -d ${tree_pick} -o ${wkdirdir}/${tag}_progu30_ksweep_dashing.csv --mink 18 --maxk 30
-#Try exact counting?
-python ${codelib}/dandd_cmd.py tree -s female -f ${female_fastas} --nthreads 30 -k25 -o ${wkdir} --exact
-
-#try 30 registers instead of usual 20
-python ${codelib}/dandd_cmd.py tree -s pangor30 -f ${female_fastas} --nthreads 30 --registers 30 -o ${wkdir} -k 20
-
-tree_pick=${wkdir}/female_56_dashing_dtree.pickle
+python ${codelib}/dandd_cmd.py info -d ${tree_pick} -o ${wkdirdir}/${tag}_ksweep_dashing.csv --mink 10 --maxk 30
 python ${codelib}/dandd_cmd.py progressive -d ${tree_pick} -n 90
-tree_pick=${outdir}/female_progu30_56_dashing_dtree.pickle
-python ${codelib}/dandd_cmd.py info -d ${tree_pick} -o ${outdir}/${tag}_ksweep_dashing.csv --mink 18 --maxk 30
+#tree_pick=${outdir}/female_progu30_56_dashing_dtree.pickle
+#python ${codelib}/dandd_cmd.py info -d ${tree_pick} -o ${outdir}/${tag}_ksweep_dashing.csv --mink 18 --maxk 30
 
-python ${codelib}/dandd_cmd.py progressive -d ${wkdir}/pangsan_56_dashing_dtree.pickle -n 10 -r ${wkdir}/sketchdb/female_56_orderings.pickle
 
-## create overlap list with HVSVC2 all sexes
-grep -f /scratch16/blangme2/jessica/data/HVSVC2/raw/SampleIds.txt ${fasta_list} > ${overlap_list}
-
-python ${codelib}/dandd_cmd.py tree -s overlap -f ${overlap_list} --nthreads 20 -k18 -o ${wkdir}
+## Run 8 overlapping samples in pangenome set
+python ${codelib}/dandd_cmd.py tree -s overlap -f ${overlap_list} -k18 -o ${wkdir}
 dtree=${wkdir}/overlap_8_dashing_dtree.pickle
+
+python ${codelib}/dandd_cmd.py progressive -d ${dtree} -f ${overlap_list} -n 90 #-r ${orderings}
+#Use same orderings when working on subset in HGSVC2 data
 orderings=${wkdir}/sketchdb/overlap_8_orderings.pickle
 
-python ${codelib}/dandd_cmd.py progressive -d ${dtree} -f ${overlap_list} -r ${orderings} 
+## Overlapping HGHVC2 Samples
+cd ${hgwkdir}
+python ${codelib}/dandd_cmd.py tree -s overlap -f ${hgoverlap_list} -k18 -o ${hgwkdir}
+tree_pick=${hgwkdir}/overlap_8_dashing_dtree.pickle
+python ${codelib}/dandd_cmd.py progressive -d ${dtree} -r ${orderings}
 
 ```
 
@@ -62,7 +74,7 @@ require(codetools)
 codelib<-'/home/jbonnie1/dandd/dev-dandD/lib/'
 source(file.path(codelib,'plot_progressive.R'))
 
-outdir<-'/home/jbonnie1/scr4_blangme2/jessica/dandd/scratch/pangenome'
+outdir<-'/scratch4/blangme2/jessica/dandd/scratch/pangenome'
 
 ```
 
@@ -78,13 +90,13 @@ plotProgressiveUnion(species=tag, out = outdir, females, nshow=5)
 
 
 
-```{bash hvsvc2, eval=FALSE}
-filelist=/scratch16/blangme2/jessica/data/HVSVC2/consensus_pangenome_overlap.txt
-grep -E "(_HG00733|_HG02818|_HG03486|_NA19240)" /home/jbonnie1/scr16_blangme2/jessica/data/HVSVC2/consensus_fastas.txt > ${filelist}
+```{bash hgsvc2, eval=FALSE}
+filelist=/scratch16/blangme2/jessica/data/HGSVC2/consensus_pangenome_overlap.txt
+grep -E "(_HG00733|_HG02818|_HG03486|_NA19240)" /home/jbonnie1/scr16_blangme2/jessica/data/HGSVC2/consensus_fastas.txt > ${filelist}
 
-python ${codelib}/dandd_cmd.py tree -s hvsvc2_overlap -f ${filelist} --nthreads 20 -k19
+python ${codelib}/dandd_cmd.py tree -s hgsvc2_overlap -f ${filelist} --nthreads 20 -k19
 
-dtree=/scratch16/blangme2/jessica/dandd/scratch/HVSVC2/hvsvc2_overlap_8_dashing_dtree.pickle
+dtree=/scratch16/blangme2/jessica/dandd/scratch/HGSVC2/hgsvc2_overlap_8_dashing_dtree.pickle
 orderings=/scratch16/blangme2/jessica/dandd/scratch/pangenome/sketchdb/overlap_8_orderings.pickle
 python ${codelib}/dandd_cmd.py progressive -d ${dtree} -f ${filelist} -r ${orderings}
 
@@ -103,9 +115,9 @@ overlap<-read.csv('/scratch16/blangme2/jessica/dandd/scratch/pangenome/overlap_8
   rename(delta_pos=delta, ngenomes=ngen)
 plotProgressiveUnion(species=tag, out = outdir, overlap, nshow=20)
 
-hvsvc2<-read.csv('/scratch16/blangme2/jessica/dandd/scratch/HVSVC2/hvsvc2_overlap_progu.csv') %>% 
+hgsvc2<-read.csv('/scratch16/blangme2/jessica/dandd/scratch/HGSVC2/hgsvc2_overlap_progu.csv') %>% 
   rename(delta_pos=delta, ngenomes=ngen) 
-plotProgressiveUnion(species=tag, out = outdir, hvsvc2, nshow=20)
+plotProgressiveUnion(species=tag, out = outdir, hgsvc2, nshow=20)
 
 ```
 
@@ -117,7 +129,7 @@ allg <-
 
   ggplot() +
   geom_smooth(data = overlap, aes(y=delta_pos, x=ngenomes, color="pangenome"), method='loess',formula=y~x,se=TRUE) +
-  geom_smooth(data = hvsvc2, aes(y=delta_pos, x=ngenomes, color="HVSVC2"), method='loess',formula=y~x, se=TRUE) +
+  geom_smooth(data = hgsvc2, aes(y=delta_pos, x=ngenomes, color="HGSVC2"), method='loess',formula=y~x, se=TRUE) +
 
 
   #geom_point(data=function(x) subset(x,Indicator),aes(y=delta_pos, x=ngenomes, shape=kval), size=2) +
@@ -129,7 +141,7 @@ allg <-
   # scale_color_discrete(name = "Random Genome Ordering") +
   xlab("Number of Genomes in Set") +
   ylab("Value of \u03b4") +
-  ggtitle(label=paste0("Values of \u03b4 over ",norder," orderings of ",gcount," Overlapping HVSVC2 and Pangenomes")) 
+  ggtitle(label=paste0("Values of \u03b4 over ",norder," orderings of ",gcount," Overlapping HGSVC2 and Pangenomes")) 
 #+xlim(c(1,3))
   # guides(color = "none")
 
