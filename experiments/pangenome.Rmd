@@ -68,6 +68,7 @@ cp /scratch4/blangme2/jessica/dandd/scratch/HGSVC2/overlap_progu0_8_dashing.csv 
 
 require(tidyr)
 require(ggplot2)
+require(dplyr)
 require(data.table)
 require(openssl)
 require(dplyr)
@@ -84,8 +85,8 @@ outdir<-'/scratch4/blangme2/jessica/dandd/scratch/pangenome'
 
 ```{r females}
 tag='pangenome'
-females<-read.csv('/scratch4/blangme2/jessica/dandd/scratch/pangenome/female_progu30_56_dashing.csv') %>% 
-  mutate(delta_pos=delta, ngenomes=ngen) %>% mutate(dataset="Pangenome")
+females<-read.csv('/scratch4/blangme2/jessica/dandd/scratch/pangenome/female_progu30_56_dashing.csv') %>% mutate(dataset="Pangenome") %>% select(-fastas)
+write.csv(x=females,"../figures/pangenome/female_progu30_56_dashing.csv", row.names = FALSE)
 plotCumulativeUnion(progu=females, title="56 Female Pangenome Haplotypes, 30 orderings", nshow=5)
 
 
