@@ -24,6 +24,6 @@ m$species <- factor(m$species, levels=c('human', 'ecoli', 'salmonella'),
 
 pdf(file='f1_dkksweep.pdf', width=4, height=3)
 ggplot(m, aes(x=kval, y=dkk_norm, color=species)) + geom_line() + theme_bw() +
-    theme(legend.position = c(0.65, 0.22), legend.title = element_blank()) +
+    theme(legend.position = c(0.651, 0.22), legend.title = element_blank()) +
     labs(x=unname(TeX('$k$')), y=unname(TeX('Standardized $d_k(S)/k$')))
 dev.off()
