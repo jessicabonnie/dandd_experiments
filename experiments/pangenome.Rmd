@@ -82,42 +82,29 @@ outdir<-'/scratch4/blangme2/jessica/dandd/scratch/pangenome'
 ```{r females}
 tag='pangenome'
 females<-read.csv('/scratch4/blangme2/jessica/dandd/scratch/pangenome/female_progu30_56_dashing.csv') %>% 
-  mutate(delta_pos=delta, ngenomes=ngen)
-plotProgressiveUnion(species=tag, out = outdir, females, nshow=5)
+  mutate(delta_pos=delta, ngenomes=ngen) %>% mutate(dataset="Pangenome")
+plotCumulativeUnion(progu=females, title="56 Female Pangenome Haplotypes, 30 orderings", nshow=5)
 
 
 ```
 
 
+## 8 Female overlapping samples (include related individuals)
 
-```{bash hgsvc2, eval=FALSE}
-filelist=/scratch16/blangme2/jessica/data/HGSVC2/consensus_pangenome_overlap.txt
-grep -E "(_HG00733|_HG02818|_HG03486|_NA19240)" /home/jbonnie1/scr16_blangme2/jessica/data/HGSVC2/consensus_fastas.txt > ${filelist}
 
-python ${codelib}/dandd_cmd.py tree -s hgsvc2_overlap -f ${filelist} --nthreads 20 -k19
-
-dtree=/scratch16/blangme2/jessica/dandd/scratch/HGSVC2/hgsvc2_overlap_8_dashing_dtree.pickle
-orderings=/scratch16/blangme2/jessica/dandd/scratch/pangenome/sketchdb/overlap_8_orderings.pickle
-python ${codelib}/dandd_cmd.py progressive -d ${dtree} -f ${filelist} -r ${orderings}
-
-python ${codelib}/dandd_cmd.py kij -d ${dtree} --mink 10 --maxk 30
-
-```
-
-## Including Plots
-
-You can also embed plots, for example:
 
 ```{r pressure, echo=FALSE}
 tag='overlap'
 
-overlap<-read.csv('/scratch16/blangme2/jessica/dandd/scratch/pangenome/overlap_8_progu.csv') %>% 
-  rename(delta_pos=delta, ngenomes=ngen)
-plotProgressiveUnion(species=tag, out = outdir, overlap, nshow=20)
+overlap<-read.csv('/scratch4/blangme2/jessica/dandd/scratch/pangenome/overlap_progu90_8_dashing.csv') %>% 
+  mutate(delta_pos=delta, ngenomes=ngen, dataset="Pangenome")
+plotCumulativeUnion(progu=overlap,title = "90 Orderings of 8 Samples", nshow=0)
 
 hgsvc2<-read.csv('/scratch16/blangme2/jessica/dandd/scratch/HGSVC2/hgsvc2_overlap_progu.csv') %>% 
-  rename(delta_pos=delta, ngenomes=ngen) 
-plotProgressiveUnion(species=tag, out = outdir, hgsvc2, nshow=20)
+  mutate(delta_pos=delta, ngenomes=ngen, dataset="HGSVC2") 
+
+
+plotCumulativeUnion(progu=rbind(overlap,hgsvc2),title="8 Overlapping Female Samples", nshow=0)
 
 ```
 
@@ -147,3 +134,27 @@ allg <-
 
 allg
 ```
+
+
+
+
+
+### Graveyard
+
+
+
+
+```{bash hgsvc2, eval=FALSE}
+filelist=/scratch16/blangme2/jessica/data/HGSVC2/consensus_pangenome_overlap.txt
+grep -E "(_HG00733|_HG02818|_HG03486|_NA19240)" /home/jbonnie1/scr16_blangme2/jessica/data/HGSVC2/consensus_fastas.txt > ${filelist}
+
+python ${codelib}/dandd_cmd.py tree -s hgsvc2_overlap -f ${filelist} --nthreads 20 -k19
+
+dtree=/scratch16/blangme2/jessica/dandd/scratch/HGSVC2/hgsvc2_overlap_8_dashing_dtree.pickle
+orderings=/scratch16/blangme2/jessica/dandd/scratch/pangenome/sketchdb/overlap_8_orderings.pickle
+python ${codelib}/dandd_cmd.py progressive -d ${dtree} -f ${filelist} -r ${orderings}
+
+python ${codelib}/dandd_cmd.py kij -d ${dtree} --mink 10 --maxk 30
+
+```
+
