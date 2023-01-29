@@ -32,8 +32,10 @@ grep -f /data/blangme2/jessica/HGSVC2/raw/SampleIds_female.txt ${female_fastas} 
 
 
 ## Create overlap list in the HGSVC2 data
-grep -f ${jdatadir}/hprc_year1_SampleIds.txt /data/blangme2/jessica/HGSVC2/consensus_fastas.txt > ${hgoverlap_list}
-grep -f ${jdatadir}/hprc_year1_females.txt /data/blangme2/jessica/HGSVC2/consensus_fastas.txt > ${hgoverlap_female}
+
+awk '{print $0"_"}' ${jdatadir}/hprc_year1_SampleIds.txt | grep -f /dev/stdin /data/blangme2/jessica/HGSVC2/consensus_fastas.txt > ${hgoverlap_list}
+awk '{print $0"_"}' ${jdatadir}/hprc_year1_females.txt | grep -f /dev/stdin /data/blangme2/jessica/HGSVC2/consensus_fastas.txt > ${hgoverlap_female}
+
 
 ## Run full pangenome: make a tree and do progressive union on that tree... maybe do a ksweep if that feels right
 python ${codelib}/dandd_cmd.py tree -s female -f ${female_fastas} -k20 -o ${wkdir}
@@ -53,12 +55,13 @@ python ${codelib}/dandd_cmd.py progressive -d ${dtree} -f ${overlap_list} -n 90 
 #Use same orderings when working on subset in HGSVC2 data
 orderings=${wkdir}/sketchdb/overlap_8_orderings.pickle
 
-## Overlapping HGHVC2 Samples
+## Overlapping HGSVC2 Samples
 cd ${hgwkdir}
 python ${codelib}/dandd_cmd.py tree -s overlap -f ${hgoverlap_list} -k18 -o ${hgwkdir}
 tree_pick=${hgwkdir}/overlap_8_dashing_dtree.pickle
-python ${codelib}/dandd_cmd.py progressive -d ${dtree} -r ${orderings}
+python ${codelib}/dandd_cmd.py progressive -d ${tree_pick} -r ${orderings}
 
+cp /scratch4/blangme2/jessica/dandd/scratch/HGSVC2/overlap_progu0_8_dashing.csv /scratch4/blangme2/jessica/dandd/scratch/HGSVC2/hgoverlap_progu90_8_dashing.csv
 ```
 
 ```{r prep, echo=FALSE,warning=FALSE, include=FALSE}
@@ -97,26 +100,28 @@ plotCumulativeUnion(progu=females, title="56 Female Pangenome Haplotypes, 30 ord
 tag='overlap'
 
 overlap<-read.csv('/scratch4/blangme2/jessica/dandd/scratch/pangenome/overlap_progu90_8_dashing.csv') %>% 
-  mutate(delta_pos=delta, ngenomes=ngen, dataset="Pangenome")
+  mutate(dataset="Pangenome")
 plotCumulativeUnion(progu=overlap,title = "90 Orderings of 8 Samples", nshow=0)
 
-hgsvc2<-read.csv('/scratch16/blangme2/jessica/dandd/scratch/HGSVC2/hgsvc2_overlap_progu.csv') %>% 
-  mutate(delta_pos=delta, ngenomes=ngen, dataset="HGSVC2") 
+hgsvc2<-read.csv('/scratch4/blangme2/jessica/dandd/scratch/HGSVC2/hgoverlap_progu90_8_dashing.csv') %>% 
+  mutate( dataset="HGSVC2")
+progu=rbind(overlap,hgsvc2) 
+summary <- progu %>% group_by(ngen) %>% summarize(mean=mean(delta),sd=sd(delta))
 
-
-plotCumulativeUnion(progu=rbind(overlap,hgsvc2),title="8 Overlapping Female Samples", nshow=0)
+plotCumulativeUnion(progu=progu,title="8 Overlapping Female Samples", nshow=0)
 
 ```
 
 
 ```{r plot_across, cache=TRUE}
 norder=max(overlap$ordering)
-gcount=max(overlap$ngenomes)
+gcount=max(overlap$ngen)
+summary <- 
 allg <-
 
   ggplot() +
-  geom_smooth(data = overlap, aes(y=delta_pos, x=ngenomes, color="pangenome"), method='loess',formula=y~x,se=TRUE) +
-  geom_smooth(data = hgsvc2, aes(y=delta_pos, x=ngenomes, color="HGSVC2"), method='loess',formula=y~x, se=TRUE) +
+  geom_smooth(data = overlap, aes(y=delta, x=ngen, color="pangenome"), method='loess',formula=y~x,se=TRUE) +
+  geom_smooth(data = hgsvc2, aes(y=delta, x=ngen, color="HGSVC2"), method='loess',formula=y~x, se=TRUE) +
 
 
   #geom_point(data=function(x) subset(x,Indicator),aes(y=delta_pos, x=ngenomes, shape=kval), size=2) +
