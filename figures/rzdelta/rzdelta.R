@@ -1,42 +1,38 @@
+#!/usr/bin/env Rscript
+
 require(lubridate)
 require(tidyr)
 require(dplyr)
 require(ggplot2)
 require(data.table)
-
-
+library(forcats)
+library(latex2exp)
 
 all_metric <- fread("./rzdelta_scaled_values.csv")
 all_bench <- fread("./rzdelta_time_bench.csv")
 
-metric_graph <- 
-  all_metric %>%
-  ggplot() + 
-  geom_line(aes(x=ngenomes,y=value,  color=metric), size=1) +
-  ggtitle(label = "Values of r,z, and \u03b4 with cumulative salmonella genomes") +
-  labs(color="", x="Number of Concatenated Salmonella Genomes", y="Scaled Metric Value") +
-  theme_bw() + 
-  theme(legend.position=c(.9,.25))
+#print(all_metric$metric)
+# all_metric$metric <- factor(all_metric$metric,
+#                                levels=c('r', 'z', 'delta'),
+#                                labels=c(unname(TeX('$r$')),
+#                                         unname(TeX('$z$')),
+#                                         unname(TeX('$\\delta$'))))
 
+pdf(file='f2_rzdelta.pdf', width=4, height=3)
+ggplot(all_metric) +
+    geom_line(aes(x=ngenomes, y=value, color=metric), size=1) +
+    scale_color_discrete(labels = unname(TeX(c("$r$", "$z$", "$\\delta$")))) +
+    labs(color="", x="Number of Salmonella Genomes", y="0-1 normalized measure") +
+    theme_bw() +
+    theme(legend.position=c(.8,.25))
+dev.off()
 
-metric_graph
-
-ggplot2::ggsave(filename = "rzdelta.png", 
-                plot = metric_graph,
-                device = "png"
-                )
-
-
-wallclock_graph <- all_bench %>% 
-  ggplot() + geom_line(aes(x=ngenomes,y=value, color=metric), size=1) + 
-  labs(y="WallClock Time (sec)", color="", x="Number of Concatenated Salmonella Genomes") +
-  ggtitle("Timing Metrics for r,z, and \u03b4 with cumulative salmonella genomes") +
-  theme_bw() + 
-  theme(legend.position=c(.1,.75))
-
-wallclock_graph
-
-ggplot2::ggsave(filename = "rzdelta_time.png", 
-                plot = wallclock_graph,
-                device = "png"
-)
+pdf(file='f2_rzdelta_time.pdf', width=4, height=3)
+all_bench$metric <- fct_relevel(all_bench$metric, 'r', 'z')
+ggplot(all_bench) +
+    geom_line(aes(x=ngenomes, y=value, color=metric), size=1) +
+    labs(y="Wall time (sec)", color="", x="Number of Salmonella Genomes") +
+    scale_color_discrete(labels = unname(TeX(c("$r$", "$z$", "$\\delta$")))) +
+    theme_bw() +
+    theme(legend.position=c(.15,.75))
+dev.off()
