@@ -1,0 +1,120 @@
+
+```{bash treemake, eval=FALSE}
+codelib=/home/jbonnie1/dandd/dev-dandD/lib
+upperout=/scratch4/blangme2/jessica/dandd/RECOMB/AFproject
+
+#ECOLI
+datadir=/data/blangme2/jessica/AF-reference_datasets190511/genome-std-assembled-ecoli/dataset/assembled-ecoli
+refdir=/data/blangme2/jessica/AF-reference_datasets190511/genome-std-assembled-ecoli/reference
+species=ecoli
+outdir=${upperout}/${species}
+cd $outdir
+reftree=${refdir}/ecoli_ref-tree.newick
+refdata=${refdir}/dataset.json
+
+#dashing
+python ${codelib}/dandd_cmd.py tree -s ${species} --datadir ${datadir} --out ${outdir}
+tree_pick=${outdir}/ecoli_29_dashing_dtree.pickle
+python ${codelib}/dandd_cmd.py kij -d ${tree_pick} -o ${outdir}/${species} --mink 2 --maxk 32 --phylo-ref ${refdata} --phylo-tree ${reftree}
+cat ${outdir}/stats/*stats > ${upperout}/${species}_kij.tsv
+
+#kmc
+species=ecoli_kmc
+outdir=${upperout}/${species}
+cd $outdir
+python ${codelib}/dandd_cmd.py tree -s ${species} --datadir ${datadir} --out ${outdir} --exact
+tree_pick=${outdir}/${species}_29_kmc_dtree.pickle
+python ${codelib}/dandd_cmd.py kij -d ${tree_pick} -o ${outdir}/${species} --mink 2 --maxk 60 --phylo-ref ${refdata} --phylo-tree ${reftree}
+
+cat ${outdir}/stats/*stats > ${upperout}/${species}_kij.tsv
+
+#FISH MITO
+datadir=/data/blangme2/jessica/AF-reference_datasets190511/genome-std-assembled-fish_mito/dataset/assembled-fish_mito/
+refdir=/data/blangme2/jessica/AF-reference_datasets190511/genome-std-assembled-fish_mito/reference
+species=fish-mito
+outdir=${upperout}/${species}
+mkdir ${outdir}
+cd $outdir
+reftree=${refdir}/tree.Fischer2013.newick
+refdata=${refdir}/dataset.json
+
+python ${codelib}/dandd_cmd.py tree -s ${species} --datadir ${datadir} --out ${outdir}
+tree_pick=${outdir}/fish-mito_25_dashing_dtree.pickle
+python ${codelib}/dandd_cmd.py kij -d ${tree_pick} -o ${outdir}/${species} --mink 2 --maxk 32 --phylo-ref ${refdata} --phylo-tree ${reftree}
+cat ${outdir}/stats/*stats > ${upperout}/${species}_kij.tsv
+
+##FISH KMC
+
+species=fish-mito_kmc
+outdir=${upperout}/${species}
+mkdir ${outdir}
+cd $outdir
+reftree=${refdir}/tree.Fischer2013.newick
+refdata=${refdir}/dataset.json
+
+python ${codelib}/dandd_cmd.py tree -s ${species} --datadir ${datadir} --out ${outdir} --exact
+tree_pick=${outdir}/fish-mito_kmc_25_kmc_dtree.pickle
+python ${codelib}/dandd_cmd.py kij -d ${tree_pick} -o ${outdir}/${species} --mink 2 --maxk 60 --phylo-ref ${refdata} --phylo-tree ${reftree}
+cat ${outdir}/stats/*stats > ${upperout}/${species}_kij.tsv
+
+
+
+```
+
+
+```{r outgraph}
+e.dash <-fread("/scratch4/blangme2/jessica/dandd/RECOMB/AFproject/ecoli_kij.tsv")
+colnames(e.dash) <- c('dist', 'k', 'k1', 'k2', 'k12', 'nRF', 'RF', 'maxRF', 'repl')
+e.dash$tool <- "Dashing"
+e.kmc <-fread("/scratch4/blangme2/jessica/dandd/RECOMB/AFproject/ecoli_kmc_kij.tsv")
+colnames(e.kmc) <- c('dist', 'k', 'k1', 'k2', 'k12', 'nRF', 'RF', 'maxRF', 'repl')
+e.kmc$tool <- "KMC"
+
+ecoli <- rbind(e.dash, e.kmc) %>% 
+  mutate(unik=ifelse(k==0,k12,k), method=ifelse(k==0,'KIJ','Fixed-k J'), species="ecoli")
+
+f.dash <-fread("/scratch4/blangme2/jessica/dandd/RECOMB/AFproject/fish-mito_kij.tsv")
+colnames(f.dash) <- c('dist', 'k', 'k1', 'k2', 'k12', 'nRF', 'RF', 'maxRF', 'repl')
+f.dash$tool <- "Dashing"
+
+f.kmc <- fread("/scratch4/blangme2/jessica/dandd/RECOMB/AFproject/fish-mito_kmc_kij.tsv")
+colnames(f.kmc) <- c('dist', 'k', 'k1', 'k2', 'k12', 'nRF', 'RF', 'maxRF', 'repl')
+f.kmc$tool <- "KMC"
+
+fish <- rbind(f.dash, f.kmc) %>% 
+  mutate(unik=as.numeric(ifelse(k==0,k12,k)), method=ifelse(k==0,'KIJ','Fixed-k J'), species="fish")
+
+afdf <- rbind(fish, ecoli)
+
+write.csv(afdf, file="../figures/AFproject/kij_j_df.csv", row.names = FALSE)
+
+
+gg_color_hue <- function(n) {
+  hues = seq(15, 375, length = n + 1)
+  hcl(h = hues, l = 65, c = 100)[1:n]
+}
+
+
+afdf$tool_and_method <- paste(afdf$tool, afdf$method)
+# fish$k <- pmax(fish$k, pmax(fish$k1, fish$k2, fish$k12, na.rm=T), na.rm=T)
+ggplot(
+  afdf, aes(x=as.numeric(unik), y=nRF, color=tool_and_method, shape=tool_and_method)) + 
+  theme_bw() + #legend.position = c(.85, .8),
+  theme(legend.title="", legend.position = c(.85, .8) ) +
+  ggtitle('Distance: 1 - Jaccard' ) +
+  geom_point(size=2,alpha=.7) + 
+  facet_wrap(~species, nrow = 2) + 
+  scale_shape_manual(values=c(15,17,19,8)) +
+  scale_color_manual(values = c(gg_color_hue(4)[1:3],"red")) +
+  theme_bw() 
+
+
+
+```
+
+
+
+
+
+
+
