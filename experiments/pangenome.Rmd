@@ -70,11 +70,10 @@ require(tidyr)
 require(ggplot2)
 require(dplyr)
 require(data.table)
-require(openssl)
-require(dplyr)
-require(optparse)
-require(callr)
-require(codetools)
+# require(openssl)
+# require(optparse)
+# require(callr)
+# require(codetools)
 codelib<-'/home/jbonnie1/dandd/dev-dandD/lib/'
 source(file.path(codelib,'plot_progressive.R'))
 
@@ -85,10 +84,9 @@ outdir<-'/scratch4/blangme2/jessica/dandd/scratch/pangenome'
 
 ```{r females}
 tag='pangenome'
-females<-read.csv('/scratch4/blangme2/jessica/dandd/scratch/pangenome/female_progu30_56_dashing.csv') %>% mutate(dataset="Pangenome") %>% select(-fastas)
-write.csv(x=females,"../figures/pangenome/female_progu30_56_dashing.csv", row.names = FALSE)
-plotCumulativeUnion(progu=females, title="56 Female Pangenome Haplotypes, 30 orderings", nshow=5)
-
+females<-read.csv('/scratch4/blangme2/jessica/dandd/scratch/pangenome/female_progu90_56_dashing.csv') %>% mutate(dataset="Pangenome") %>% select(-fastas)
+write.csv(x=females,"../figures/pangenome/female_progu90_56_dashing.csv", row.names = FALSE)
+plotCumulativeUnion(progu=females, title="56 Female Pangenome Haplotypes, 90 orderings", nshow=0)
 
 ```
 
@@ -109,8 +107,12 @@ hgsvc2<-read.csv('/scratch4/blangme2/jessica/dandd/scratch/HGSVC2/hgoverlap_prog
 progu=rbind(overlap,hgsvc2) 
 summary <- progu %>% group_by(ngen) %>% summarize(mean=mean(delta),sd=sd(delta))
 
-plotCumulativeUnion(progu=progu,title="8 Overlapping Female Samples", nshow=0)
+write.csv(x=summary,"../figures/overlap/overlap_summary.csv", row.names = FALSE)
 
+plotCumulativeUnion(progu=progu,title="8 Overlapping Female Samples", nshow=0) + 
+  theme(legend.background = element_rect(colour = 'black', fill = 'white', linetype='solid')) 
+  
+alpha(filter(progu, dataset=="Pangenome"),"Pangenome")
 ```
 
 
