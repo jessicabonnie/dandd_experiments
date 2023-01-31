@@ -30,11 +30,11 @@ plotCumulativeUnion <- function(progu, title, summarize=TRUE, nshow=10) {
       mutate(ngen=as.integer(ngen),kval=as.factor(kval))
     tp <- tp +
       geom_line(data=summary, aes(y=mean, x=ngen, linetype="Mean")) +
+      #geom_point(data=filter(progu,Indicator),aes(y=delta, x=ngen, shape=kval), size=.5) +
       geom_line(data=filter(progu,Indicator),
                 aes(y=delta, x=ngen,# linetype="Individual Ordering",
                     group=ordering, color=as.factor(ordering)), size=.5) +
-      scale_shape_discrete(name="argmax(k)") +
-      guides(color = 'none')
+      scale_shape_discrete(name="argmax(k)")
   }
   else {
     tp <- tp +
@@ -46,6 +46,7 @@ plotCumulativeUnion <- function(progu, title, summarize=TRUE, nshow=10) {
     theme_bw() +
     theme(legend.position=c(.6,.2), legend.title = element_blank()) +
     scale_x_continuous(breaks= scales::pretty_breaks(10)) +
+    scale_color_discrete(labels = unname(TeX(c("Mean ($\\alpha$ = 0.873)")))) +
     xlab("Number of HPRC haplotypes") +
     ylab(unname(TeX("Mean $\\delta$ (billions)"))) +
     scale_y_continuous(labels = scales::label_number_auto())
@@ -62,9 +63,9 @@ p1 <- ggplot(df, aes(y=mean/1e9, x=ngen, color=dataset))  +
     theme(legend.position=c(.6,.2), legend.title = element_blank()) +
     xlab("Number of HGSVC2 Haplotypes") +
     ylab(unname(TeX("Mean $\\delta$ (billions)"))) +
-    scale_color_discrete(labels = unname(TeX(c("SNVs + Indels ($\\alpha$=0.943)",
-                                               "SNVs + SVs + Indels  ($\\alpha$=0.944)",
-                                               "SNVs Only ($\\alpha=0.939$)")))) +
+    scale_color_discrete(labels = unname(TeX(c("SNVs + Indels ($\\alpha$ = 0.943)",
+                                               "SNVs + SVs + Indels  ($\\alpha$ = 0.944)",
+                                               "SNVs Only ($\\alpha = 0.939$)")))) +
     scale_y_continuous(labels = scales::label_number_auto())
 
 p2 <- plotCumulativeUnion(progu=pa, title="56 Female Pangenome Haplotypes, 30 orderings", nshow=5)
