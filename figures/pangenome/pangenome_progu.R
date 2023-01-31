@@ -1,16 +1,10 @@
+#!/usr/bin/env Rscript
+
 require(tidyr)
 require(ggplot2)
 require(dplyr)
 
 females<-read.csv('female_progu30_56_dashing.csv') %>% mutate(dataset="Pangenome")
-xx <- plotCumulativeUnion(progu=females, title="56 Female Pangenome Haplotypes, 30 orderings", nshow=5)
-
-
-ggplot2::ggsave(filename = "pangenome_progu.png", 
-                plot = xx,
-                device = "png"
-)
-
 
 
 plotCumulativeUnion <- function(progu, title, summarize=TRUE, nshow=10){
@@ -72,3 +66,12 @@ alpha <- function(progu.df){
   return(alpha)
 }
 
+xx <- plotCumulativeUnion(progu=females, title="56 Female Pangenome Haplotypes, 30 orderings", nshow=5)
+
+
+ggplot2::ggsave(filename = "pangenome_progu.png",
+                plot = xx,
+                device = "png"
+)
+
+print(alpha(females))

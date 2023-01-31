@@ -18,12 +18,12 @@ argm_human <- m$kval[which(m$species == 'human' & m$dkk_norm == 1.0)]
 argm_salmo <- m$kval[which(m$species == 'salmonella' & m$dkk_norm == 1.0)]
 fct_relevel(m$species, 'human', 'ecoli', 'salmonella')
 m$species <- factor(m$species, levels=c('human', 'ecoli', 'salmonella'),
-                               labels=c(paste0("human (k* = ", argm_human, ")"),
+                               labels=c(paste0("Human (k* = ", argm_human, ")"),
                                         paste0("E. coli (k* = ", argm_ecoli, ")"),
-                                        paste0("salmonella (k* = ", argm_salmo, ")")))
+                                        paste0("Salmonella (k* = ", argm_salmo, ")")))
 
 pdf(file='f1_dkksweep.pdf', width=4, height=3)
 ggplot(m, aes(x=kval, y=dkk_norm, color=species)) + geom_line() + theme_bw() +
     theme(legend.position = c(0.651, 0.22), legend.title = element_blank()) +
-    labs(x=unname(TeX('$k$')), y=unname(TeX('Standardized $d_k(S)/k$')))
+    labs(x=unname(TeX('$k$')), y=unname(TeX('0-1 Normalized $d_k(S)/k$')))
 dev.off()
