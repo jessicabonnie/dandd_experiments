@@ -4,13 +4,13 @@
 require(tidyr)
 require(ggplot2)
 require(data.table)
-require(openssl)
+#require(openssl)
 require(dplyr)
-require(optparse)
-require(callr)
-require(codetools)
+#require(optparse)
+#require(callr)
+#require(codetools)
 
-codelib<-'/home/jbonnie1/dandd/dev-dandD/lib/'
+codelib<-'~/dandd/dev-dandD/helpers/'
 source(file.path(codelib,'plot_progressive.R'))
 
 outdir<-'/home/jbonnie1/scr4_blangme2/jessica/dandd/scratch/HGSVC2'
@@ -51,41 +51,185 @@ progu <- read.csv('/scratch4/blangme2/jessica/dandd/scratch/HGSVC2/quad_progu504
 
 tag='quad'
 ngenome=7
+fixme <- function(x){ifelse(x==0,1,ifelse(x==-1,0,x))}
 
-abba.quad <- clean_abba(progu)
+abba.quad <- clean_abba(progu) %>% mutate(ngen=step, dataset="quad")
+ordkey <- abba.quad %>%
+  select(ordering, step, flist4, contains("HG0051")) %>%
+  filter(step %in% c(3,4,5)) %>%
+  mutate(across(contains("HG0051"),.fns=~fixme(.x))) %>%
+  rowwise() %>%
+  mutate(flist4=stringr::str_flatten(flist4),fam=sum(HG00513_1,HG00513_2,HG00514_1)) %>%
+  select(-contains("HG0051")) %>%
+  pivot_wider(names_from=c(step,step),values_from=c(flist4,fam), values_fn = as.factor, names_prefix = "step")
+
+sdmult=2.75
+sub.orderings <- abba.quad %>% filter(step>1 & step < 7) %>% group_by(step)  %>%
+  mutate(sd=sd(deltadelta), mean=mean(deltadelta)) %>%
+  filter(deltadelta < mean-sdmult*sd | deltadelta > mean+sdmult*sd) %>% pull(ordering) %>% unique()
+
+
+abba.quad2 <- abba.quad %>% inner_join(ordkey) %>% mutate(orderingf=ifelse(ordering %in% sub.orderings, "outlier", "inside"))
+
+
+abba.quad2 %>% select(-contains("flist4_")) %>% pivot_longer(cols = contains("_step"),names_to = "type",values_to = "value") %>%
+ggplot() + facet_wrap(~type,ncol=1) +
+    geom_point(aes(y=delta, x=step, shape=as.factor(kval)), size=.5) +
+    geom_line(aes(y=delta, x=step, color=value, group=as.factor(ordering)), size=.5) + theme_bw() + 
+    theme(legend.position = "right") 
+
+
+ggplot(abba.quad2) + 
+    geom_point(aes(y=delta, x=step, shape=as.factor(kval)), size=.5) +
+    geom_line(aes(y=delta, x=step, color=as.factor(fam_step3), group=as.factor(ordering)), size=.5) + theme_bw() + 
+    theme(legend.position = "bottom") + ggtitle("Colored By Number of Related Haplotypes at Step 3")
+ggplot(abba.quad2) + 
+    geom_point(aes(y=delta, x=step, shape=as.factor(kval)), size=.5) +
+    geom_line(aes(y=delta, x=step, color=as.factor(fam_step4), group=as.factor(ordering)), size=.5) + theme_bw() + 
+    theme(legend.position = "bottom") + ggtitle("Colored By Number of Related Haplotypes at Step 4")
+ggplot(abba.quad2) + 
+    geom_point(aes(y=delta, x=step, shape=as.factor(kval)), size=.5) +
+    geom_line(aes(y=delta, x=step, color=as.factor(fam_step5), group=as.factor(ordering)), size=.5) + 
+  theme_bw()  +
+    theme(legend.position = "bottom") + 
+  ggtitle("Colored By Number of Related Haplotypes at Step 5")
+
 
 # delta_quad<-read.csv('/scratch4/blangme2/jessica/dandd/scratch/HGSVC2/quad_progu.csv') %>% 
   # rename(delta_pos=delta) #, ngenomes=ngen)
-plotProgressiveUnion(species=tag, out = outdir, abba.quad, nshow=10)
+#plotCumulativeUnion(progu=abba.quad,summarize = TRUE, nshow=30,"b;ah", abba=TRUE)
 ## Look at 1-0 or 0-1 for variants on the X Chromosome in vcf, other haplotype might always have 0
 
 ```
 
-```{r abba, cache=TRUE}
+
+
+```{r abba_fam_subset, cache=TRUE}
+
+abba.quad2 %>% filter(ordering %in% sub.orderings) %>%
+  select(-contains("flist4_")) %>% pivot_longer(cols = contains("_step"),names_to = "type",values_to = "value") %>%
+ggplot() + facet_wrap(~type,ncol=1) +
+    geom_point(aes(y=delta, x=step, shape=as.factor(kval)), size=.5) +
+    geom_line(aes(y=delta, x=step, color=value, group=as.factor(ordering)), size=.5) + 
+  theme_bw() + theme(legend.position = "right") + ggtitle(paste0("Subsetted deltadelta >/- mean +/- ",sdmult,"SD"))
+
+abba.quad2 %>% 
+  select(-contains("flist4_")) %>% pivot_longer(cols = contains("_step"),names_to = "type",values_to = "value") %>%
+ggplot() + facet_wrap(~type,ncol=1) +
+    # geom_point(aes(y=delta, x=step, shape=as.factor(kval)), size=.5) +
+    geom_line(aes(y=delta, x=step, color=value, group=as.factor(ordering), alpha=as.factor(orderingf)), size=.5) + 
+  theme_bw() + theme(legend.position = "right") + ggtitle(paste0("Subsetted deltadelta >/- mean +/- ",sdmult,"SD"))
+
+abba.quad2 %>% 
+  ggplot() +
+    #geom_point(aes(y=delta, x=step), size=.5) +
+    geom_line(aes(y=delta, x=step, color=as.factor(fam_step3), group=as.factor(ordering), alpha=as.factor(orderingf)), size=.5) + 
+    # geom_line(data=abba.quad2, aes(y=delta, x=step, color=as.factor(fam_step3), group=as.factor(ordering)),alpha=.25, size=.5) +
+  theme_bw() + 
+    theme(legend.position = "bottom") + 
+  ggtitle(paste0("Subsetted deltadelta >/- mean +/- ",sdmult,"SD, Step 3"))
+#ggplot(filter(abba.quad2, ordering %in% sub.orderings)) + 
+
+ggplot(abba.quad2) +
+    #geom_point(aes(y=delta, x=step, shape=as.factor(kval)), size=.5) +
+   geom_line(aes(y=delta, x=step, color=as.factor(fam_step4), group=as.factor(ordering), alpha=as.factor(orderingf)), size=.5) +  theme_bw() + 
+    theme(legend.position = "bottom") + 
+  ggtitle(paste0("Subsetted deltadelta >/- mean +/- ",sdmult,"SD, Step 4"))
+
+ggplot(abba.quad2) +
+    #geom_point(aes(y=delta, x=step, shape=as.factor(kval)), size=.5) +
+   geom_line(aes(y=delta, x=step, color=as.factor(fam_step5), group=as.factor(ordering), alpha=as.factor(orderingf)), size=.5) +  theme_bw() + 
+    theme(legend.position = "bottom") + 
+  ggtitle(paste0("Subsetted deltadelta >/- mean +/- ",sdmult,"SD, Step 5"))
+
+```
+
+```{r abba_flist4, cache=TRUE}
+
+
+
+ggplot(abba.quad2) + 
+    geom_point(aes(y=delta, x=step, shape=as.factor(kval)), size=.5) +
+    geom_line(aes(y=delta, x=step, color=as.factor(flist4_step3), group=as.factor(ordering)), size=.5) + theme_bw() + 
+    theme(legend.position = "bottom") + 
+  ggtitle("Colored By Set of Haplotypes at Step 3")
+ggplot(abba.quad2) + 
+    geom_point(aes(y=delta, x=step, shape=as.factor(kval)), size=.5) +
+    geom_line(aes(y=delta, x=step, color=as.factor(flist4_step4), group=as.factor(ordering)), size=.5) + theme_bw() + 
+    theme(legend.position = "bottom") + 
+  ggtitle("Colored By Set of Haplotypes at Step 4")
+ggplot(abba.quad2) + 
+    geom_point(aes(y=delta, x=step, shape=as.factor(kval)), size=.5) +
+    geom_line(aes(y=delta, x=step, color=as.factor(flist4_step5), group=as.factor(ordering)), size=.5) + theme_bw() + 
+    theme(legend.position = "bottom") + 
+  ggtitle("Colored By Set of Haplotypes at Step 5")
+
+
+
+
+```
+
+
+
+
+
+```{r abba_box, cache=TRUE}
 # abba.quad <- read.csv('/scratch4/blangme2/jessica/dandd/scratch/HGSVC2/quad_abba_clean.csv')
 #abba.quad$added <- apply(select(abba.quad,-step), 1, function(data)
  #  names(which(data == 0)))
 
+abba.quad %>%
+  rowwise() %>% mutate(fam=sum(fixme(HG00513_1),fixme(HG00513_2),fixme(HG00514_1))) %>%
+  filter(step < 7, step > 2) %>%
+ggplot() + geom_boxplot(aes(x=as.factor(step),y=delta,color=as.factor(fam))) + scale_y_log10() + theme_bw() + guides(color = guide_legend("Number of related haplotypes"))
 
-ggplot(abba.quad) + geom_boxplot(aes(x=as.factor(step),y=deltadelta)) + scale_y_log10()
+abba.quad %>%
+  rowwise() %>% mutate(fam=sum(fixme(HG00513_1),fixme(HG00513_2),fixme(HG00514_1))) %>%
+  filter(step > 1) %>%
+ggplot() + geom_boxplot(aes(x=as.factor(step),y=deltadelta,color=as.factor(fam))) + scale_y_log10() + theme_bw() + guides(color = guide_legend("Number of related haplotypes"))
 # abba.quad %>% pivot_longer(contains("HG"),names_to="who",values_to = "value")
 ```
 
 
 ```{r abba2, cache=TRUE}
-ggplot(abba.quad) + geom_boxplot(aes(x=as.factor(step),y=deltadelta, color=as.factor(HG00514_1))) + geom_point(aes(x=as.factor(step),y=deltadelta, color=as.factor(HG00514_1))) + scale_y_log10() 
+abba.quad %>% select(delta,deltadelta,ordering,kval,step,flist1,HG00514_2,HG00514_1, last, previous) %>%
+  pivot_longer(cols=c(HG00514_1,HG00514_2), names_to="daughter_haplotype") %>%
+filter(step > 1 & step < 7, ) %>% 
+  ggplot() + geom_boxplot(aes(x=as.factor(step),y=deltadelta, color=as.factor(value)))  + scale_y_log10() + facet_wrap(~daughter_haplotype)
+
+abba.quad %>% select(delta,deltadelta,ordering,kval,step,flist1,HG00514_2,HG00514_1, previous) %>%
+  pivot_longer(cols=c(HG00514_1,HG00514_2), names_to="daughter_haplotype") %>%
+filter(step > 1 & step < 7) %>%
+  mutate(value=ifelse()) %>%
+  mutate(presence=recode_factor(as.factor(value),`1`="previously",`-1`="not", `0`="this step")) %>%
+  ggplot() + geom_boxplot(aes(x=as.factor(step),y=deltadelta, color=as.factor(daughter_haplotype)))  + scale_y_log10() + facet_wrap(~presence)
+  
+ggplot(filter(abba.quad, step > 1 & step < 7)) + geom_boxplot(aes(x=as.factor(step),y=deltadelta, color=as.factor(HG00514_1))) + geom_point(aes(x=as.factor(step),y=deltadelta, color=as.factor(HG00514_1))) + scale_y_log10() 
+
 ggplot(abba.quad) + geom_boxplot(aes(x=as.factor(step),y=deltadelta, color=as.factor(HG00514_2))) + geom_point(aes(x=as.factor(step),y=deltadelta, color=as.factor(HG00514_2))) + scale_y_log10()
 ```
 
 ```{r facet}
 abba.quad$added_before <- factor((abba.quad$HG00513_1 == 1) + (abba.quad$HG00513_2 == 1))
 dfsumm <- abba.quad %>% group_by(step) %>% summarise(mean=mean(deltadelta), sd=sd(deltadelta), median=median(deltadelta))
-dfj <- inner_join(abba.quad, dfsumm)
+
+abba.quad %>% ungroup() %>% select(-flist1,-flist2,-prior,-flist4, -last) %>% 
+  unique() %>% ggplot() + geom_line(aes(x=step, y= delta, group=as.factor(ordering)))
+
+dfj <- abba.quad %>% ungroup() %>% select(-fastas,-flist1,-flist2,-prior,-flist4, -last, -ordering) %>%
+  unique()
+
+dfj <- inner_join(dfj, dfsumm) 
 plot.dfj <- dfj %>% filter((HG00514_1 == 0 | HG00514_2 == 0) & step >= 3 & step <= 5) 
 plot.dfj$Haplotype <- ifelse(plot.dfj$HG00514_1 == 0,"Maternal","Paternal")
 # ggplot(dfj %>% filter((HG00514_1 == 0 | HG00514_2 == 0) & step >= 2 & step <= 4), aes(y=(deltadelta-mean)/sd, x=added_before, color=added_before)) + geom_jitter(height=0) + facet_grid(step ~ (HG00514_1 == 0)) + theme_bw()
 
+
 ggplot(plot.dfj, aes(y=(deltadelta-mean)/sd, x=added_before, color=added_before)) + geom_jitter(height=0, size=.25) + facet_grid(step ~ Haplotype) + theme_bw() + ggtitle("Standardized \u394\u03b4 Captures Multi-Way Haplotype Relationships") + labs(color="Number of Mother's\nhaplotypes already added", x="",y="Standardized \u394 \u03b4") 
+
+
+ggplot(plot.dfj, aes(y=(deltadelta-mean)/sd, x=added_before, color=added_before)) + geom_boxplot() + facet_grid(step ~ Haplotype) + theme_bw() + ggtitle("Standardized \u394\u03b4 Captures Multi-Way Haplotype Relationships") + labs(color="Number of Mother's\nhaplotypes already added", x="",y="Standardized \u394 \u03b4")
+
 #+ theme(plot.caption = element_textbox_simple())
 # First row shows Stdized Dd for final step of all length 3 permutations where 3rd step is addition of maternal (right column) or paternal (left column) haplotype for daughter. Second and third rows show same relationship for length 4 and 5 permuations. Stdized Dd far below 0 are indicative of closer than average relationships.")
 
