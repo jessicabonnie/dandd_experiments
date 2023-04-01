@@ -8,10 +8,14 @@ output: html_document
 ##The first two chunks merely describe how the data in the dash_kmc_bench.csv table was created
 
 ```{bash benchmark, eval=FALSE}
+ml anaconda
+conda activate ~/miniconda3/envs/dashing
+
 #1 =species, 2=approach, 3=kval, 4=upperout
 codedir=/home/jbonnie1/dandd/dev-dandD/helpers
 upperout=/scratch4/blangme2/jessica/dandd/RECOMB/benchmarking #1
 species=humanb
+mkdir ${upperout}/${species}
 ${codedir}/benchmark.sh ${species} dashing 20 ${upperout} > ${upperout}/${species}_dashing_benchmark.txt
 ${codedir}/benchmark.sh ${species} kmc 20 ${upperout} > ${upperout}/${species}_kmc_benchmark.txt
 
@@ -20,10 +24,12 @@ ${codedir}/benchmark.sh ${species} kmc 20 ${upperout} > ${upperout}/${species}_k
 #${codedir}/benchmark.sh ${species} kmc 19 ${upperout} > ${upperout}/${species}_kmc_benchmark.txt
 
 species=ecoli
+mkdir ${upperout}/${species}
 ${codedir}/benchmark.sh ${species} dashing 15 ${upperout} > ${upperout}/${species}_dashing_benchmark.txt
 ${codedir}/benchmark.sh ${species} kmc 15 ${upperout} > ${upperout}/${species}_kmc_benchmark.txt
 
 species=salmonella
+mkdir ${upperout}/${species}
 ${codedir}/benchmark.sh ${species} dashing 14 ${upperout} > ${upperout}/${species}_dashing_benchmark.txt
 ${codedir}/benchmark.sh ${species} kmc 14 ${upperout} > ${upperout}/${species}_kmc_benchmark.txt
 
@@ -69,6 +75,8 @@ h.times$MaxResSetSize_kb[h.times$Stage==2 & h.times$Count==1] <- NA
 all.times <- rbind(e.times,s.times, h.times) %>%
   mutate(MaxResSetSize_gb=MaxResSetSize_kb/1e6,
          WallClock_ms = WallClock_sec*1e3)
+
+
 ```
 
 ##Here on to generate from all.times table
@@ -79,6 +87,7 @@ cards <- all.times %>%
   select(Method, species,Stage,Card, Count, line) %>%
   pivot_wider(names_from=Method,values_from=Card) %>%
   mutate(AbsDiff=abs(dashing-kmc), Ratio=AbsDiff/kmc)
+write.csv(cards, "../../dandd-paper/data/table1_carderror.csv")
 
 ```
 
@@ -106,14 +115,17 @@ stage1 <- all.times %>% filter(Stage==1) %>% ungroup() %>%
          MaxResSetSize_kb_mean=MaxResSetSize_kb_fn1,
          MaxResSetSize_kb_sd=MaxResSetSize_kb_fn2,
          MaxResSetSize_gb_mean=MaxResSetSize_gb_fn1,
-         MaxResSetSize_gb_sd=MaxResSetSize_gb_fn2) 
+         MaxResSetSize_gb_sd=MaxResSetSize_gb_fn2) %>%
 #%>%
   # mutate(MaxResSetSize_gb_mean=MaxResSetSize_kb_mean/1e6,
   #        MaxResSetSize_gb_sd=MaxResSetSize_kb_sd/1e6,
   #        WallClock_mean_ms=WallClock_mean*1e3,
   #        WallClock_sd_ms=WallClock_sd*1e3)
-stage1 %>% select(species,Method,contains("Wall"),contains("MaxRes"))
+select(species,Method,contains("Wall"),contains("MaxRes"))
 
+
+write.csv(stage1, "../../dandd-paper/data/table1_per_sketch.csv")
+stage1
 ```
 
 
@@ -139,7 +151,7 @@ stage2 <- all.times %>% filter(Stage==2)  %>%
   select(species,Method,contains("Wall"),contains("space"))
 
 stage2
-
+write.csv(stage2, "../../dandd-paper/data/table1_cumunion.csv")
 ```
 
 
@@ -159,7 +171,7 @@ stage3 <- all.times %>% filter(Stage==3)  %>% ungroup() %>%
   select(species,Method,contains("Wall"),contains("gb"),contains("kb"),-contains("hms"))
 
 stage3
-
+write.csv(stage3, "../../dandd-paper/data/table1_globunion.csv")
 ```
 
 ## TABLE CONTENTS
