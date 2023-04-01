@@ -192,24 +192,29 @@ omar50.canon <- omar50 %>%
 
 omar50.noncanon <- omar50 %>%
   select(ngenomes,r,z,rtime,ztime,r_scale,z_scale) %>%
-  mutate(canon=0) %>% 
+  mutate(canon=0) %>%
   pivot_longer(cols=c(r,z,rtime,ztime,r_scale,z_scale),names_to = "title",values_to="x") %>%
  mutate(name=substr(title,1,1), type=ifelse(grepl("time",title),"time","value"), scaled=ifelse(grepl("scale",title),"scaled","unscaled")) %>% select(-title) %>% ungroup() %>%
   group_by(ngenomes,canon) %>% pivot_wider(names_from=name, values_from = x)
 
-omar <- bind_rows(omar50.canon, omar50.noncanon) %>% pivot_longer(cols=c(r,z), names_to="metric", values_to="value")
+omar <- #bind_rows(omar50.canon, omar50.noncanon) 
+  omar50.canon %>% pivot_longer(cols=c(r,z), names_to="metric", values_to="value")
 
-bench_k14<-bind_rows(fread("/scratch4/blangme2/jessica/dandd/RECOMB/r_z_delta/salmonellarz_concat_bench.csv"),fread("/scratch4/blangme2/jessica/dandd/RECOMB/r_z_delta/salmonellarz_concat_nc_bench.csv")) %>%
+bench_k14<- #bind_rows(fread("/scratch4/blangme2/jessica/dandd/RECOMB/r_z_delta/salmonellarz_concat_bench.csv"),fread("/scratch4/blangme2/jessica/dandd/RECOMB/r_z_delta/salmonellarz_concat_nc_bench.csv")) %>%
+  fread("/scratch4/blangme2/jessica/dandd/RECOMB/r_z_delta/salmonellarz_concat_bench.csv") %>%
   mutate(metric="delta")
-bench_k15<-bind_rows(fread("/scratch4/blangme2/jessica/dandd/RECOMB/r_z_delta_k15/salmonellarz_concat_bench.csv"),fread("/scratch4/blangme2/jessica/dandd/RECOMB/r_z_delta_k15/salmonellarz_concat_nc_bench.csv")) %>%
-  mutate(metric="delta_k15")
+# bench_k15<-bind_rows(fread("/scratch4/blangme2/jessica/dandd/RECOMB/r_z_delta_k15/salmonellarz_concat_bench.csv"),fread("/scratch4/blangme2/jessica/dandd/RECOMB/r_z_delta_k15/salmonellarz_concat_nc_bench.csv")) %>%
+#   mutate(metric="delta_k15")
 #bind_rows(bench_k14,bench_k15)
-bench<- bench_k14 %>% mutate(type="time", scaled="unscaled",WallClock_sec=as.numeric(ms(WallClock_hms))) %>% select(ngenomes=ngen,type,canon,metric,value=UserTime_sec, scaled, WallClock_hms)
+bench<- bench_k14 %>% mutate(type="time", scaled="unscaled",WallClock_sec=as.numeric(ms(WallClock_hms))) %>% select(ngenomes=ngen,type,canon,metric,value=UserTime_sec, scaled, WallClock_sec)
 
 salmonellarz <- mutate(salmonellarz,metric=ifelse(metric=="delta","\u03b4",metric))
 
+
+all_metric <- bind_rows(omar,salmonellarz) %>% filter(scaled=="scaled", type=="value", canon==1)
+write.csv(x=all_metric,"../figures/rzdelta/rzdelta_scaled_values.csv", row.names = FALSE)
 #pgraph <- 
-  bind_rows(omar,salmonellarz) %>% filter(scaled=="scaled", type=="value", canon==1) %>%
+  all_metric %>%
   ggplot() + 
   geom_line(aes(x=ngenomes,y=value,  color=metric), size=1) +
   ggtitle(label = "Values of r,z, and \u03b4 with cumulative salmonella genomes") +
@@ -219,8 +224,11 @@ salmonellarz <- mutate(salmonellarz,metric=ifelse(metric=="delta","\u03b4",metri
 # 
 # bind_rows(omar,salmonellarz) %>% filter(scaled=="unscaled", type=="value") %>% ggplot() + geom_line(aes(x=ngenomes,y=value, color=metric)) + facet_wrap(~canon)
 # 
-bind_rows(omar,bench) %>% 
-  filter(scaled=="unscaled", type=="time", canon==1) %>% 
+all_bench <- bind_rows(omar,bench) %>% 
+  filter(scaled=="unscaled", type=="time", canon==1) 
+write.csv(x=all_bench,"../figures/rzdelta/rzdelta_time_bench.csv", row.names = FALSE)
+
+all_bench %>% 
   ggplot() + geom_line(aes(x=ngenomes,y=value, color=metric), size=1) + 
   labs(y="WallClock Time (sec)", color="", x="Number of Concatenated Salmonella Genomes") +
   ggtitle("Timing Metrics for r,z, and \u03b4 with cumulative salmonella genomes") +
