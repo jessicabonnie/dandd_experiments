@@ -85,7 +85,7 @@ fish <- rbind(f.dash, f.kmc) %>%
   mutate(unik=as.numeric(ifelse(k==0,k12,k)), method=ifelse(k==0,'KIJ','Fixed-k J'), species="fish")
 
 afdf <- rbind(fish, ecoli)
-
+afdf$tool_and_method <- paste(afdf$tool, afdf$method)
 write.csv(afdf, file="../figures/AFproject/kij_j_df.csv", row.names = FALSE)
 
 
@@ -95,8 +95,6 @@ gg_color_hue <- function(n) {
 }
 
 
-afdf$tool_and_method <- paste(afdf$tool, afdf$method)
-# fish$k <- pmax(fish$k, pmax(fish$k1, fish$k2, fish$k12, na.rm=T), na.rm=T)
 ggplot(
   afdf, aes(x=as.numeric(unik), y=nRF, color=tool_and_method, shape=tool_and_method)) + 
   theme_bw() + #legend.position = c(.85, .8),
@@ -113,7 +111,27 @@ ggplot(
 ```
 
 
+```{r graph_triangular}
 
+scan("/scratch4/blangme2/jessica/dandd/RECOMB/AFproject/fish-mito/phylip/fish-mito.sim.k5.phylip",what = "list",skip = 1) -> phyl5
+scan("/scratch4/blangme2/jessica/dandd/RECOMB/AFproject/fish-mito/phylip/fish-mito.sim.k5.phylip",what = "list",skip = 1) -> phyl9
+scan("/scratch4/blangme2/jessica/dandd/RECOMB/AFproject/fish-mito/phylip/fish-mito.sim.k4.phylip",what = "list",skip = 1) -> phyl4
+matrix(nrow=26,ncol=26) -> output
+output[upper.tri(output, diag = FALSE)] <- phyl4
+finally <- t(output)
+finally[,1] -> rownames(finally)
+colnames(finally) <- rownames(finally)
+finally2 <- finally[-c(1),-c(1)]
+
+finallong <- as.data.table(finally2,keep.rownames = TRUE) %>% pivot_longer(cols=-1,names_to=c("sample1"),values_to = "dist",values_drop_na = TRUE) %>% mutate(dist=as.numeric(dist)) 
+ ggplot(finallong,mapping=aes(x=sample1,y=rn,fill=dist)) + geom_tile(color="white")+ 
+  theme_bw()+
+  theme(axis.text.x=element_text(angle=45, vjust=1, size=10, hjust=1))+
+  coord_fixed()+
+  labs(x="",y="")+
+  theme_bw()
+   #geom_raster(aes(x=sample1,y=rn,color=dist))
+```
 
 
 
